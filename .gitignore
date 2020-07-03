@@ -1,0 +1,7 @@
+distribute.sh
+log.txt
+StatsCollector
+update_server.sh
+client/*
+server/*
+.vscode/*

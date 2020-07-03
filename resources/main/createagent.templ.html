@@ -1,0 +1,30 @@
+{{template "Top" .}}
+<div class="container">
+    <form action="/add_agent" method="POST">
+        <div class="form-group">
+            <label for="name">Friendly Agent Name (Optional)</label>
+            <input type="text" name="name" class="form-control" placeholder="Enter Username">
+        </div>
+        <div class="form-group">
+            <label for="sshkey">SSH Public Key</label>
+            <textarea name="sshkey" class="form-control" placeholder="SSH Key" rows="4" cols="50"
+                placeholder="SSH Public Key"></textarea>
+        </div>
+        {{if .Status }}
+        {{if not .Error}}
+        <div class="alert alert-success" role="alert">
+            {{.Status}}
+        </div>
+        {{else}}
+        <div class="alert alert-danger" role="alert">
+            {{.Status}}
+        </div>
+        {{end}}
+        {{end}}
+        {{ .csrfField }}
+        <div class="form-group" style="padding-top: 1em">
+            <button type="submit" class="btn btn-primary">Create</button>
+        </div>
+    </form>
+</div>
+{{template "Bottom" .}}
