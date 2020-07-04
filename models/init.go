@@ -14,5 +14,6 @@ func InitaliseModels(db *gorm.DB) {
 		&NotificationDetail{},
 		&SystemInfo{},
 		&Alert{},
+		&User{},
 	)
 }
