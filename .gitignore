@@ -3,3 +3,4 @@ update_server.sh
 .vscode/*
 run_server.sh
 bin/*
+deploy
