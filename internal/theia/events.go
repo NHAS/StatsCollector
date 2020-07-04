@@ -32,6 +32,7 @@ func sendEvent(db *gorm.DB, agentID int64, urgency int, title, message string) e
 }
 
 func eventGenerator(db *gorm.DB) {
+	time.Sleep(1 * time.Minute) // Wait for things to connect before just saying theyre dead
 	for {
 		timeout := time.Now().Add(-10 * time.Minute)
 
