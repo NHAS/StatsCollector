@@ -2,14 +2,17 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"os"
 	"strings"
 	"syscall"
 
+	"github.com/NHAS/StatsCollector/internal/theia"
 	"github.com/NHAS/StatsCollector/models"
 	"github.com/NHAS/StatsCollector/utils"
 	"github.com/jinzhu/gorm"
@@ -17,8 +20,6 @@ import (
 )
 
 func main() {
-
-	flag.Bool("server", false, "If set start server")
 	flag.Bool("adduser", false, "Add user to database and quit")
 	var configPath = flag.String("config", "config.json", "Configuration file")
 	var logFilePath = flag.String("log", "log.txt", "Path to log file")
@@ -33,17 +34,12 @@ func main() {
 	flagset := make(map[string]bool)
 	flag.Visit(func(f *flag.Flag) { flagset[f.Name] = true })
 
-	if flagset["server"] || flagset["adduser"] {
+	pwd := os.Getenv("PASSWORD")
 
-		pwd := os.Getenv("PASSWORD")
+	db, err := gorm.Open("postgres", "sslmode=disable host=localhost port=5432 user=gorm dbname=stats password="+pwd)
+	utils.Check("Could not connect to database", err)
 
-		db, err := gorm.Open("postgres", "sslmode=disable host=localhost port=5432 user=gorm dbname=stats password="+pwd)
-		utils.Check("Could not connect to database", err)
-
-		if flagset["server"] {
-			runServer(db, *configPath)
-			return
-		}
+	if flagset["adduser"] {
 
 		db.AutoMigrate(&models.User{})
 		username, password, err := credentials()
@@ -56,7 +52,17 @@ func main() {
 		return
 	}
 
-	runClient(*configPath)
+	// Public key authentication is done by comparing
+	// the public key of a received connection
+	// with the entries in the authorized_keys file.
+	configurationBytes, err := ioutil.ReadFile(*configPath)
+	utils.Check("Failed to load settings", err)
+
+	var config theia.ServerConfig
+	err = json.Unmarshal(configurationBytes, &config)
+	utils.Check("Failed to unmarshal config", err)
+
+	theia.RunServer(db, config)
 
 }
 

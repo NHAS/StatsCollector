@@ -1,4 +1,4 @@
-package main
+package iris
 
 import (
 	"bytes"
@@ -27,7 +27,7 @@ type monitor struct {
 	TimeoutSeconds int    `json:"timeout_seconds"`
 }
 
-type clientConfig struct {
+type ClientConfig struct {
 	ServerAddress     string    `json:"server_address"`
 	AuthorisedKey     string    `json:"authorised_key"`
 	MonitorURLS       []monitor `json:"monitor_urls"`
@@ -35,18 +35,7 @@ type clientConfig struct {
 	UpdateIntervalSec int       `json:"update_seconds"`
 }
 
-func runClient(configPath string) {
-
-	log.Println("Starting in client mode")
-
-	configurationBytes, err := ioutil.ReadFile(configPath)
-	utils.Check("Load [settings] failed", err)
-
-	var config clientConfig
-
-	config.UpdateIntervalSec = 240
-	err = json.Unmarshal(configurationBytes, &config)
-	utils.Check("Unmarshalling [settings[ failed", err)
+func RunClient(config ClientConfig) {
 
 	hostKey, _, _, _, err := ssh.ParseAuthorizedKey([]byte(config.AuthorisedKey))
 	utils.Check("Parse [authorised key] failed", err)

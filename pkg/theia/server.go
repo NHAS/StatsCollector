@@ -1,4 +1,4 @@
-package main
+package theia
 
 import (
 	"crypto/tls"
@@ -15,30 +15,20 @@ import (
 	"github.com/NHAS/StatsCollector/utils"
 	"github.com/NHAS/StatsCollector/webservice"
 	"github.com/jinzhu/gorm"
-	_ "github.com/jinzhu/gorm/dialects/postgres"
+	_ "github.com/jinzhu/gorm/dialects/postgres" // Imports the postgres dialect for gorm to use
 
 	"golang.org/x/crypto/ssh"
 )
 
-type serverConfig struct {
+type ServerConfig struct {
 	CollectionListenAddr string `json:"ssh_listen_addr"`
 	WebListenAddr        string `json:"web_interface_addr"`
 	PrivateKeyPath       string `json:"private_key_path"`
 }
 
-func runServer(db *gorm.DB, configPath string) {
+func RunServer(db *gorm.DB, config ServerConfig) {
 
-	log.Println("Starting in server mode")
-	// Public key authentication is done by comparing
-	// the public key of a received connection
-	// with the entries in the authorized_keys file.
-	configurationBytes, err := ioutil.ReadFile(configPath)
-	utils.Check("Failed to load settings", err)
-
-	var config serverConfig
-	err = json.Unmarshal(configurationBytes, &config)
-	utils.Check("Failed to unmarshal config", err)
-
+	
 	models.InitaliseModels(db)
 
 	db.Model(&models.Agent{}).Update("currently_connected", false)

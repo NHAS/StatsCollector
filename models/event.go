@@ -7,8 +7,8 @@ import "time"
 type Event struct {
 	Id        int64
 	AgentId   int64
-	UserId    int64
 	Urgency   int
+	Title     string
 	Message   string
 	Notified  bool
 	CreatedAt time.Time
