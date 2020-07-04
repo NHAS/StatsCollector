@@ -1,6 +1,7 @@
 package webservice
 
 import (
+	"log"
 	"strings"
 	"time"
 
@@ -16,6 +17,13 @@ func authorisionMiddleware(db *gorm.DB) gin.HandlerFunc {
 			denyRequest(c)
 			return
 		}
+
+		if err := db.Model(&models.User{}).Where("id = ?", user.Id).Update("token_created_at", time.Now().Unix()).Error; err != nil {
+			denyRequest(c)
+			log.Println("Unable to extend token lifetime: ", err)
+			return
+		}
+
 		c.Keys = make(map[string]interface{})
 		c.Keys["user"] = user
 	}
@@ -42,7 +50,7 @@ func checkCookie(c *gin.Context, db *gorm.DB) (valid bool, u models.User) {
 		return false, u
 	}
 
-	expiresAt := time.Unix(record.TokenCreatedAt, 0).Add(1 * time.Hour)
+	expiresAt := time.Unix(record.TokenCreatedAt, 0).Add(15 * time.Minute)
 	if time.Now().After(expiresAt) {
 		return false, u
 	}
