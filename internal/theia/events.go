@@ -24,11 +24,11 @@ func sendEvent(db *gorm.DB, agentID int64, urgency int, title, message string) e
 	}
 
 	if num > 0 {
-		log.Println("Ratelimiting message as it has occured within 2 hour")
+		log.Println("Ratelimiting message as it has occured within 2 hours")
 		return nil
 	}
 
-	return db.Create(&models.Event{AgentId: agentID, Urgency: urgency, Message: message}).Error
+	return db.Create(&models.Event{AgentId: agentID, Urgency: urgency, Title: title, Message: message}).Error
 }
 
 func eventGenerator(db *gorm.DB) {
@@ -36,35 +36,46 @@ func eventGenerator(db *gorm.DB) {
 		timeout := time.Now().Add(-10 * time.Minute)
 
 		var agentsWithIssues []models.Agent
-		if err := db.Debug().Preload("Monitors").Preload("Disks").
+		if err := db.Debug().Preload("Monitors").Preload("Disks").Preload("AlertProfile").
 			Select("DISTINCT agents.*").
 			Joins("INNER JOIN monitor_entries ON agents.id = monitor_entries.agent_id").
 			Joins("INNER JOIN disk_entries ON agents.id = disk_entries.agent_id").
 			Joins("INNER JOIN alerts ON agents.id = alerts.agent_id").
 			Find(&agentsWithIssues,
-				"alerts.active AND ((NOT agents.currently_connected AND agents.last_transmission < ?) OR disk_entries.usage > alerts.disk_util OR NOT monitor_entries.ok)", timeout).
+				"alerts.active AND (agents.last_transmission < ? OR disk_entries.usage > alerts.disk_util OR NOT monitor_entries.ok)", timeout).
 			Error; err != nil {
 			log.Println("Error loading database things: ", err)
 			return
 		}
 
 		for _, a := range agentsWithIssues {
+			title := ""
 
 			message := "Agent: " + a.PubKey + "\n"
 			if len(a.Name) > 0 {
 				message += "Friendly Name: " + a.Name + "\n"
+				title += a.Name + " "
+			} else {
+				title += "Agent "
 			}
 			if len(a.LastConnectionFrom) > 0 {
 				message += "Last Connection: " + a.LastConnectionFrom + "\n"
 			}
 
+			message += "Last Transmission: " + a.LastTransmission.Format("Mon Jan 2 15:04") + "\n"
+			if !a.CurrentlyConnected {
+				title += " is offline"
+			}
+
 			message += "\nEndpoint Status\n"
 
+			endpointsDown := 0
 			for _, m := range a.Monitors {
 
 				message += "\t" + m.MonitorEntry.Path + "\n\tStatus: "
 				if !m.MonitorEntry.OK {
 					message += "Down. Reason: " + m.MonitorEntry.Reason + "\n"
+					endpointsDown++
 					continue
 				}
 
@@ -74,11 +85,19 @@ func eventGenerator(db *gorm.DB) {
 
 			message += "\nDisks\n"
 
+			disksAboveUsage := 0
 			for _, d := range a.Disks {
+				if int64(d.Usage) > a.AlertProfile.DiskUtil {
+					disksAboveUsage++
+				}
 				message += "\t" + d.Device + " Usage: " + fmt.Sprintf("%.02f", d.Usage) + "\n"
 			}
 
-			if err := sendEvent(db, a.Id, 1, "Agent has issues", message); err != nil {
+			if a.CurrentlyConnected {
+				title += "has " + fmt.Sprintf("%d endpoints down, %d disks over usage", endpointsDown, disksAboveUsage)
+			}
+
+			if err := sendEvent(db, a.Id, 1, title, message); err != nil {
 				log.Println("Unable to send event, dying: ", err)
 				return
 			}
@@ -107,7 +126,7 @@ func startEventProcessors(db *gorm.DB) {
 	for {
 
 		var events []models.Event
-		if err := db.Find(&events, "notified = false AND urgency < 2").Error; err == nil {
+		if err := db.Find(&events, "notified = false AND urgency < 2").Error; err == nil && len(events) > 0 {
 
 			// Here is the key, you need to call tls.Dial instead of smtp.Dial
 			// for smtp servers running on 465 that require an ssl connection
@@ -178,10 +197,8 @@ func startEventProcessors(db *gorm.DB) {
 
 			c.Quit()
 			log.Println("Disconnecting")
-		} else {
-			log.Println(err)
 		}
 
-		<-time.After(30 * time.Second)
+		<-time.After(5 * time.Minute)
 	}
 }
