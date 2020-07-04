@@ -2,6 +2,7 @@ package theia
 
 import (
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"log"
 	"net"
@@ -12,6 +13,8 @@ import (
 	"github.com/NHAS/StatsCollector/models"
 	"github.com/jinzhu/gorm"
 )
+
+var ErrRatelimited = errors.New("Ratelimiting email send request")
 
 func sendEvent(db *gorm.DB, agentID int64, urgency int, title, message string) error {
 	t := time.Now()
@@ -25,7 +28,7 @@ func sendEvent(db *gorm.DB, agentID int64, urgency int, title, message string) e
 
 	if num > 0 {
 		log.Println("Ratelimiting message as it has occured within 2 hours")
-		return nil
+		return ErrRatelimited
 	}
 
 	return db.Create(&models.Event{AgentId: agentID, Urgency: urgency, Title: title, Message: message}).Error
