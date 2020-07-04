@@ -145,19 +145,6 @@ func handleAgentConnection(nConn net.Conn, config *ssh.ServerConfig, db *gorm.DB
 
 		go func() {
 			defer channel.Close()
-			defer func(db *gorm.DB) {
-				timestamp := time.Now()
-				message := "Agent: " + clientAgent.Name + "\n\t"
-				message += clientAgent.PubKey + "\n\t"
-				message += clientAgent.LastConnectionFrom + "\n"
-				message += "Is offline (As of " + timestamp.Format("15:04:05 Jan 2 Mon") + ")\n"
-
-				err := sendEvent(db, clientAgent.Id, 1, "Agent disconnected", message)
-				if err != nil {
-					log.Println("Was unable to send event message: " + err.Error())
-				}
-			}(db)
-
 			decoder := json.NewDecoder(channel)
 
 			for {

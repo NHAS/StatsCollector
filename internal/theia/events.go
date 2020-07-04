@@ -33,13 +33,17 @@ func sendEvent(db *gorm.DB, agentID int64, urgency int, title, message string) e
 
 func eventGenerator(db *gorm.DB) {
 	for {
+		timeout := time.Now().Add(-10 * time.Minute)
+
 		var agentsWithIssues []models.Agent
 		if err := db.Debug().Preload("Monitors").Preload("Disks").
 			Select("DISTINCT agents.*").
 			Joins("INNER JOIN monitor_entries ON agents.id = monitor_entries.agent_id").
 			Joins("INNER JOIN disk_entries ON agents.id = disk_entries.agent_id").
 			Joins("INNER JOIN alerts ON agents.id = alerts.agent_id").
-			Find(&agentsWithIssues, "alerts.active AND agents.currently_connected AND (disk_entries.usage > alerts.disk_util OR NOT monitor_entries.ok)").Error; err != nil {
+			Find(&agentsWithIssues,
+				"alerts.active AND ((NOT agents.currently_connected AND agents.last_transmission < ?) OR disk_entries.usage > alerts.disk_util OR NOT monitor_entries.ok)", timeout).
+			Error; err != nil {
 			log.Println("Error loading database things: ", err)
 			return
 		}
