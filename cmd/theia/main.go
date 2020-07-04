@@ -59,6 +59,7 @@ func main() {
 	utils.Check("Failed to load settings", err)
 
 	var config theia.ServerConfig
+	config.WebResourcesPath = "."
 	err = json.Unmarshal(configurationBytes, &config)
 	utils.Check("Failed to unmarshal config", err)
 

@@ -110,9 +110,14 @@ func eventGenerator(db *gorm.DB) {
 
 func startEventProcessors(db *gorm.DB) {
 	var notification models.NotificationDetail
-	if err := db.First(&notification).Error; err != nil {
+	for {
+
+		err := db.First(&notification).Error
+		if err == nil {
+			break
+		}
 		log.Println("Unable to find details of how to notify:", err)
-		return
+		time.Sleep(30 * time.Second)
 	}
 
 	host, _, _ := net.SplitHostPort(notification.EmailProviderHost)

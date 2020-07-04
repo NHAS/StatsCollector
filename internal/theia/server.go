@@ -22,6 +22,7 @@ type ServerConfig struct {
 	CollectionListenAddr string `json:"ssh_listen_addr"`
 	WebListenAddr        string `json:"web_interface_addr"`
 	PrivateKeyPath       string `json:"private_key_path"`
+	WebResourcesPath     string `json:"web_path"`
 }
 
 //RunServer starts the webserver, ssh server (collector) and the event database notifier
@@ -78,7 +79,7 @@ func RunServer(db *gorm.DB, config ServerConfig) {
 	utils.Check("Failed to listen for connection: ", err)
 
 	log.Println("Starting web interface")
-	webservice.StartWebServer(config.WebListenAddr, db)
+	webservice.StartWebServer(config.WebListenAddr, config.WebResourcesPath, db)
 
 	log.Println("Starting event processor")
 	go startEventProcessors(db)

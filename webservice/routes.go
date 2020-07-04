@@ -23,7 +23,7 @@ const (
 	CookieName = "auth"
 )
 
-func StartWebServer(listenAddr string, db *gorm.DB) {
+func StartWebServer(listenAddr, templates string, db *gorm.DB) {
 
 	r := gin.Default()
 	r.SetFuncMap(template.FuncMap{
@@ -39,7 +39,7 @@ func StartWebServer(listenAddr string, db *gorm.DB) {
 
 	db.AutoMigrate(&models.User{})
 
-	r.LoadHTMLGlob("resources/*/*.templ.html")
+	r.LoadHTMLGlob(templates + "/*/*.templ.html")
 
 	CSRF := csrf.Protect([]byte("189734oiylkasJHKUY"), csrf.Secure(false))
 
