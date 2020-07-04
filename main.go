@@ -35,7 +35,9 @@ func main() {
 
 	if flagset["server"] || flagset["adduser"] {
 
-		db, err := gorm.Open("postgres", "sslmode=disable host=localhost port=5432 user=gorm dbname=stats password=")
+		pwd := os.Getenv("PASSWORD")
+
+		db, err := gorm.Open("postgres", "sslmode=disable host=localhost port=5432 user=gorm dbname=stats password="+pwd)
 		utils.Check("Could not connect to database", err)
 
 		if flagset["server"] {
