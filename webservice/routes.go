@@ -194,10 +194,10 @@ func getAgent(db *gorm.DB) gin.HandlerFunc {
 			return
 		}
 
-		if err := db.Find(&sysinfo, "agent_id = ?", currentAgent.Id).Error; err != nil {
+		if err := db.Find(&sysinfo, "agent_id = ?", currentAgent.Id).Error; err != nil && err != gorm.ErrRecordNotFound {
 
 			log.Println(err)
-			c.String(404, "Not found nerd2")
+			c.String(404, "Error getting sys info")
 
 			return
 		}
