@@ -19,7 +19,7 @@ func sendEvent(db *gorm.DB, agentID int64, urgency int, title, message string) e
 	cooldown := t.Add(-2 * time.Hour)
 
 	var num int64
-	if err := db.Model(&models.Event{}).Where("created_at > ? AND message = ? AND agent_id = ?", cooldown, message, agentID).Count(&num).Error; err != nil {
+	if err := db.Model(&models.Event{}).Where("created_at > ? AND title = ? AND agent_id = ?", cooldown, title, agentID).Count(&num).Error; err != nil {
 		return err
 	}
 
