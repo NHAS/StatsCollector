@@ -8,9 +8,9 @@ import (
 	"net"
 	"time"
 
+	"github.com/NHAS/StatsCollector/internal/theia/webservice"
 	"github.com/NHAS/StatsCollector/models"
 	"github.com/NHAS/StatsCollector/utils"
-	"github.com/NHAS/StatsCollector/webservice"
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/postgres" // Imports the postgres dialect for gorm to use
 

@@ -34,22 +34,31 @@ func sendEvent(db *gorm.DB, agentID int64, urgency int, title, message string) e
 	return db.Create(&models.Event{AgentId: agentID, Urgency: urgency, Title: title, Message: message}).Error
 }
 
+func getAgentsWithIssues(db *gorm.DB) (agentsWithIssues []models.Agent, err error) {
+	timeout := time.Now().Add(-10 * time.Minute)
+
+	if err = db.Debug().Preload("Monitors").Preload("Disks").Preload("AlertProfile").
+		Select("DISTINCT agents.*").
+		Joins("INNER JOIN monitor_entries ON agents.id = monitor_entries.agent_id").
+		Joins("INNER JOIN disk_entries ON agents.id = disk_entries.agent_id").
+		Joins("INNER JOIN alerts ON agents.id = alerts.agent_id").
+		Find(&agentsWithIssues,
+			"alerts.active AND (agents.last_transmission < ? OR disk_entries.usage > alerts.disk_util OR NOT monitor_entries.ok)", timeout).
+		Error; err != nil {
+
+		return agentsWithIssues, err
+	}
+
+	return agentsWithIssues, nil
+}
+
 func eventGenerator(db *gorm.DB) {
 	time.Sleep(1 * time.Minute) // Wait for things to connect before just saying theyre dead
 	for {
-		timeout := time.Now().Add(-10 * time.Minute)
 
-		var agentsWithIssues []models.Agent
-		if err := db.Debug().Preload("Monitors").Preload("Disks").Preload("AlertProfile").
-			Select("DISTINCT agents.*").
-			Joins("INNER JOIN monitor_entries ON agents.id = monitor_entries.agent_id").
-			Joins("INNER JOIN disk_entries ON agents.id = disk_entries.agent_id").
-			Joins("INNER JOIN alerts ON agents.id = alerts.agent_id").
-			Find(&agentsWithIssues,
-				"alerts.active AND (agents.last_transmission < ? OR disk_entries.usage > alerts.disk_util OR NOT monitor_entries.ok)", timeout).
-			Error; err != nil {
-			log.Println("Error loading database things: ", err)
-			return
+		agentsWithIssues, err := getAgentsWithIssues(db)
+		if err != nil {
+			log.Println("Error getting agents with issues: ", err)
 		}
 
 		for _, a := range agentsWithIssues {
