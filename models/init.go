@@ -4,7 +4,11 @@ import (
 	"github.com/jinzhu/gorm"
 )
 
-func InitaliseModels(db *gorm.DB) {
+var db *gorm.DB
+
+func InitaliseModels(Inputdb *gorm.DB) {
+
+	db = Inputdb
 
 	db.AutoMigrate(
 		&Event{},

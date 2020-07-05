@@ -12,7 +12,6 @@ import (
 	"github.com/NHAS/StatsCollector/models"
 	"github.com/NHAS/StatsCollector/utils"
 	"github.com/gin-gonic/gin"
-	"github.com/gliderlabs/ssh"
 	"github.com/gorilla/csrf"
 	"github.com/jinzhu/gorm"
 	"golang.org/x/crypto/bcrypt"
@@ -101,41 +100,32 @@ func getDashboard(db *gorm.DB) gin.HandlerFunc {
 			return
 		}
 
-		degraded := 0
-		up := 0
+		var totalAgents int
+		db.Model(&models.Agent{}).Count(&totalAgents)
+
 		var downAgents []models.Agent
-		var failedEndpoints []models.MonitorEntry
-		for _, agent := range agents {
-			if !agent.CurrentlyConnected {
-				downAgents = append(downAgents, agent)
-				continue
-			}
+		db.Find(&downAgents, "currently_connected = ?", false)
 
-			var agentFailedEndPoints []models.MonitorEntry
-			if err := db.Find(&agentFailedEndPoints, "ok = ?", false).Error; err != nil {
-				log.Println("Loading all failed endpoints failed: ", err)
-				c.String(500, "Endpoint loading failed", nil)
-				return
-			}
+		var degradedAgents []models.Agent
+		db.Select("DISTINCT agents.*").
+			Joins("INNER JOIN monitor_entries ON agents.id = monitor_entries.agent_id").
+			Find(&degradedAgents, "NOT monitor_entries.ok")
 
-			if len(agentFailedEndPoints) > 0 {
-				failedEndpoints = append(failedEndpoints, agentFailedEndPoints...)
-				degraded++
-				continue
-			}
-
-			up++
-
+		var failedEndPoints []models.MonitorEntry
+		if err := db.Find(&failedEndPoints, "ok = ?", false).Error; err != nil {
+			log.Println("Loading all failed endpoints failed: ", err)
+			c.String(500, "Endpoint loading failed", nil)
+			return
 		}
 
 		log.Println(downAgents)
 		c.HTML(http.StatusOK, "dashboard.templ.html", gin.H{
-			"Total":           len(agents),
-			"Up":              up,
+			"Total":           totalAgents,
+			"Up":              totalAgents - len(downAgents) - len(degradedAgents),
 			"Down":            len(downAgents),
-			"Degraded":        degraded,
+			"Degraded":        len(degradedAgents),
 			"OfflineAgents":   downAgents,
-			"FailedEndpoints": failedEndpoints,
+			"FailedEndpoints": failedEndPoints,
 			"Agents":          agents,
 		})
 	}
@@ -144,18 +134,17 @@ func getDashboard(db *gorm.DB) gin.HandlerFunc {
 func getAgentsList(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		query := c.Request.URL.Query()
-		var agents []models.Agent
 
-		tx := db
-
+		filter := ""
 		if len(query["status"]) == 1 {
-			status := query["status"][0]
-			tx = tx.Where("currently_connected = ?", status == "online")
+			filter = query["status"][0]
 		}
 
-		if err := tx.Preload("Monitors").Preload("Disks").Find(&agents).Limit(100).Error; err != nil {
-			log.Println("Error getting data")
-			c.String(500, "Shits broke", nil)
+		agents, err := models.GetAgentList(filter, 100)
+		if err != nil {
+			log.Println("Error getting agents list: ", err)
+			c.String(500, "Unable to get agents list")
+
 			return
 		}
 
@@ -174,17 +163,10 @@ func getAgent(db *gorm.DB) gin.HandlerFunc {
 			return
 		}
 
-		var currentAgent models.Agent
-
-		if err := db.Preload("AlertProfile").
-			Preload("Monitors").
-			Preload("Disks").
-			Preload("SystemInfo").
-			Find(&currentAgent, "pub_key = ?", string(key)).Error; err != nil {
-
-			log.Println(err)
-			c.String(404, "Not found nerd1")
-
+		currentAgent, err := models.GetAgent(string(key))
+		if err != nil {
+			log.Println("Unable to get current agent: ", err)
+			c.String(404, "Agent not found")
 			return
 		}
 
@@ -317,47 +299,14 @@ func getCreateAgentPage() gin.HandlerFunc {
 
 func postCreateAgent(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
-
-		key := strings.TrimSpace(c.PostForm("sshkey"))
 		name := strings.TrimSpace(c.PostForm("name"))
+		key := strings.TrimSpace(c.PostForm("sshkey"))
 
-		if len(name) > 1000 {
-			c.HTML(http.StatusOK, "createagent.templ.html", gin.H{
-				"Error":          true,
-				"Status":         "Name is too long",
-				csrf.TemplateTag: csrf.TemplateField(c.Request),
-			})
-			return
-		}
-
-		if len(key) == 0 {
-			c.HTML(http.StatusOK, "createagent.templ.html", gin.H{
-				"Error":          true,
-				"Status":         "SSH Key is a mandatory Field",
-				csrf.TemplateTag: csrf.TemplateField(c.Request),
-			})
-			return
-		}
-
-		_, _, _, _, err := ssh.ParseAuthorizedKey([]byte(key))
+		err := models.CreateAgent(name, key)
 		if err != nil {
 			c.HTML(http.StatusOK, "createagent.templ.html", gin.H{
 				"Error":          true,
-				"Status":         "SSH Key is invalid",
-				csrf.TemplateTag: csrf.TemplateField(c.Request),
-			})
-			return
-		}
-
-		var newAgent models.Agent
-		newAgent.Name = name
-		newAgent.PubKey = key
-
-		if err := db.Create(&newAgent).Error; err != nil {
-			log.Println("Unable to add to database: ", err)
-			c.HTML(http.StatusOK, "createagent.templ.html", gin.H{
-				"Error":          true,
-				"Status":         "Unable to create agent",
+				"Status":         err.Error(),
 				csrf.TemplateTag: csrf.TemplateField(c.Request),
 			})
 			return
@@ -376,18 +325,10 @@ func postRemoveAgent(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		key := strings.TrimSpace(c.PostForm("pubkey"))
 
-		var toRemove models.Agent
-		if err := db.Find(&toRemove, "pub_key = ?", key).Error; err != nil {
-			log.Println("Unable to remove to database: ", err)
-			c.Redirect(302, "/agent_list")
-			return
+		err := models.DeleteAgent(key)
+		if err != nil {
+			log.Println("Error removing agent: ", err)
 		}
-
-		db.Where("id = ?", toRemove.Id).Delete(&toRemove)
-		db.Delete(&models.MonitorEntry{}, "agent_id = ?", toRemove.Id)
-		db.Delete(&models.DiskEntry{}, "agent_id = ?", toRemove.Id)
-		db.Delete(&models.Alert{}, "agent_id = ?", toRemove.Id)
-		db.Delete(&models.Event{}, "agent_id = ?", toRemove.Id)
 		c.Redirect(302, "/agent_list")
 
 	}
