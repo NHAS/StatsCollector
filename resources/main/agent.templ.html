@@ -53,31 +53,33 @@
                 <div class="row">
                     <div class="col">
                         <div class="card-body text-center">
-                            <table class="table table-responsive" style="width:100%">
-                                <thead>
-                                    <tr>
-                                        <th scope="col">Memory (bytes)</th>
-                                        <th scope="col">No. CPU</th>
-                                        <th scope="col">Kernel Version</th>
-                                        <th scope="col">Platform</th>
-                                        <th scope="col">Family</th>
-                                        <th scope="col">Version</th>
+                            <div class="table-responsive">
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th scope="col">Memory (bytes)</th>
+                                            <th scope="col">No. CPU</th>
+                                            <th scope="col">Kernel Version</th>
+                                            <th scope="col">Platform</th>
+                                            <th scope="col">Family</th>
+                                            <th scope="col">Version</th>
 
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr>
-                                        <td>{{.Agent.SystemInfo.TotalMemory}}</td>
-                                        <td>{{.Agent.SystemInfo.CpuCores}}</td>
-                                        <td>{{.Agent.SystemInfo.KernelVersion}}</td>
-                                        <td>{{.Agent.SystemInfo.Platform}}</td>
-                                        <td>{{.Agent.SystemInfo.Family}}</td>
-                                        <td>{{.Agent.SystemInfo.Version}}</td>
-                                    </tr>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>{{.Agent.SystemInfo.TotalMemory}}</td>
+                                            <td>{{.Agent.SystemInfo.CpuCores}}</td>
+                                            <td>{{.Agent.SystemInfo.KernelVersion}}</td>
+                                            <td>{{.Agent.SystemInfo.Platform}}</td>
+                                            <td>{{.Agent.SystemInfo.Family}}</td>
+                                            <td>{{.Agent.SystemInfo.Version}}</td>
+                                        </tr>
 
 
-                                </tbody>
-                            </table>
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
                 </div>
