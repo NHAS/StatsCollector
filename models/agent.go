@@ -88,3 +88,33 @@ func GetAgentList(filter string, limit int) (agents []Agent, err error) {
 
 	return agents, err
 }
+
+func GetDashboardInformation() (totalAgents int, downAgents []Agent, degradedAgents []Agent, failedEndPoints []MonitorEntry, err error) {
+
+	err = db.Model(&models.Agent{}).Count(&totalAgents).Error
+	if err != nil {
+		goto failed
+	}
+
+	err = db.Find(&downAgents, "currently_connected = ?", false).Error
+	if err != nil {
+		goto failed
+	}
+
+	err = db.Select("DISTINCT agents.*").
+		Joins("INNER JOIN monitor_entries ON agents.id = monitor_entries.agent_id").
+		Find(&degradedAgents, "(NOT monitor_entries.ok) AND agents.currently_connected").Error
+	if err != nil {
+		goto failed
+	}
+
+	err = db.Find(&failedEndPoints, "ok = ?", false).Error
+	if err != nil {
+		goto failed
+	}
+
+	return totalAgents, downAgents, degradedAgents, failedEndPoints, nil
+
+failed:
+	return 0, []Agent{}, []Agent{}, []MonitorEntry{}, err
+}

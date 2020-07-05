@@ -93,32 +93,13 @@ func index(db *gorm.DB) gin.HandlerFunc {
 func getDashboard(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 
-		var agents []models.Agent
-		if err := db.Debug().Find(&agents).Error; err != nil {
-			log.Println("Loading all agents failed: ", err)
-			c.String(500, "Loading failed", nil)
+		totalAgents, downAgents, degradedAgents, failedEndPoints, err := models.GetDashboardInformation()
+		if err != nil {
+			log.Println("Unable to load information for dashboard: ", err)
+			c.String(500, "Unable to load dashboard")
 			return
 		}
 
-		var totalAgents int
-		db.Model(&models.Agent{}).Count(&totalAgents)
-
-		var downAgents []models.Agent
-		db.Find(&downAgents, "currently_connected = ?", false)
-
-		var degradedAgents []models.Agent
-		db.Select("DISTINCT agents.*").
-			Joins("INNER JOIN monitor_entries ON agents.id = monitor_entries.agent_id").
-			Find(&degradedAgents, "NOT monitor_entries.ok")
-
-		var failedEndPoints []models.MonitorEntry
-		if err := db.Find(&failedEndPoints, "ok = ?", false).Error; err != nil {
-			log.Println("Loading all failed endpoints failed: ", err)
-			c.String(500, "Endpoint loading failed", nil)
-			return
-		}
-
-		log.Println(downAgents)
 		c.HTML(http.StatusOK, "dashboard.templ.html", gin.H{
 			"Total":           totalAgents,
 			"Up":              totalAgents - len(downAgents) - len(degradedAgents),
@@ -126,7 +107,6 @@ func getDashboard(db *gorm.DB) gin.HandlerFunc {
 			"Degraded":        len(degradedAgents),
 			"OfflineAgents":   downAgents,
 			"FailedEndpoints": failedEndPoints,
-			"Agents":          agents,
 		})
 	}
 }
