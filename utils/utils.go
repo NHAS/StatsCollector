@@ -6,32 +6,13 @@ import (
 	"encoding/hex"
 	"log"
 
-	"github.com/NHAS/StatsCollector/models"
-	"github.com/jinzhu/gorm"
-	"golang.org/x/crypto/bcrypt"
-	"golang.org/x/crypto/ssh"
+	"github.com/gliderlabs/ssh"
 )
 
 func Check(message string, err error) {
 	if err != nil {
 		log.Fatalln(message, " : ", err)
 	}
-}
-
-func AddUser(db *gorm.DB, name, password string) error {
-	hashBytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-	if err != nil {
-		return err
-	}
-
-	guid, err := GenerateHexToken(16)
-	if err != nil {
-		return err
-	}
-
-	newUser := &models.User{Username: name, Password: string(hashBytes), GUID: guid}
-
-	return db.Debug().Create(newUser).Error
 }
 
 func HexFingerprintSHA256(pubKey ssh.PublicKey) string {

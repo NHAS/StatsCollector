@@ -41,11 +41,11 @@ func main() {
 
 	if flagset["adduser"] {
 
-		db.AutoMigrate(&models.User{})
+		models.InitaliseModels(db)
 		username, password, err := credentials()
 		utils.Check("Unable to get password", err)
 
-		err = utils.AddUser(db, username, password)
+		err = models.AddUser(username, password)
 		utils.Check("Unable to add user to database", err)
 
 		log.Println("User added")
