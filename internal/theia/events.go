@@ -110,7 +110,7 @@ func eventGenerator(db *gorm.DB) {
 				title += "has " + fmt.Sprintf("%d endpoints down, %d disks over usage", endpointsDown, disksAboveUsage)
 			}
 
-			if err := sendEvent(db, a.Id, 1, title, message); err != nil {
+			if err := sendEvent(db, a.ID, 1, title, message); err != nil {
 				log.Println("Unable to send event, dying: ", err)
 				return
 			}

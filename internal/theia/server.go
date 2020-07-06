@@ -174,10 +174,10 @@ func handleAgentConnection(nConn net.Conn, config *ssh.ServerConfig, db *gorm.DB
 
 				for device, usage := range stat.DiskUsage {
 					var entry models.DiskEntry
-					if err := db.Where("device = ? AND agent_id = ?", device, clientAgent.Id).First(&entry).Error; err != nil {
+					if err := db.Where("device = ? AND agent_id = ?", device, clientAgent.ID).First(&entry).Error; err != nil {
 						if err == gorm.ErrRecordNotFound {
 							if err := db.Create(&models.DiskEntry{
-								AgentId: clientAgent.Id,
+								AgentId: clientAgent.ID,
 								Device:  device,
 								Usage:   usage,
 							}).Error; err != nil {
@@ -201,10 +201,10 @@ func handleAgentConnection(nConn net.Conn, config *ssh.ServerConfig, db *gorm.DB
 				for _, monitorV := range stat.MonitorValues {
 					var me models.MonitorEntry
 
-					if err := db.Where("path = ? AND agent_id = ?", monitorV.Path, clientAgent.Id).First(&me).Error; err != nil {
+					if err := db.Where("path = ? AND agent_id = ?", monitorV.Path, clientAgent.ID).First(&me).Error; err != nil {
 						if err == gorm.ErrRecordNotFound {
 							if err := db.Create(&models.MonitorEntry{
-								AgentId:      clientAgent.Id,
+								AgentId:      clientAgent.ID,
 								MonitorEntry: monitorV,
 							}).Error; err != nil {
 								log.Println("Unable to create new monitor entry: ", err)
@@ -235,7 +235,7 @@ func handleAgentConnection(nConn net.Conn, config *ssh.ServerConfig, db *gorm.DB
 			for req := range in {
 				switch req.Type {
 				case "system":
-					if err := storeSystemAttributes(clientAgent.Id, req.Payload, db); err != nil {
+					if err := storeSystemAttributes(clientAgent.ID, req.Payload, db); err != nil {
 						log.Printf("Client [%s] sent something I couldnt decode, killing", publicKey)
 						channel.Close()
 						return

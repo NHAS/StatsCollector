@@ -21,13 +21,19 @@ type NotificationDetail struct {
 	EmailProviderHost string
 }
 
+//ErrManditoryFieldsNotFilled is returned if the user did not fill out one or more of the fields required
 var ErrManditoryFieldsNotFilled = errors.New("Manditory fields were not filled with data")
+
+//ErrNotValidEmailAddress is an email address for sending/recieving wasnt a valid email address, this is returned
 var ErrNotValidEmailAddress = errors.New("Not a valid email address")
 
+//GetNotificationSettingsForUser returns the users current preference for notification.
+//This is the host with which to send from, and the destiniation to send to
 func GetNotificationSettingsForUser(uid int64) (emailInformation NotificationDetail, err error) {
 	return emailInformation, db.Find(&emailInformation, "user_id = ?", uid).Error
 }
 
+//CreateNotificationSetting sets a users notification prefers in the database
 func CreateNotificationSetting(uid int64, destiniationEmail, sendingAccountEmail, sendingAccountPassword, emailProvider string) error {
 	if len(destiniationEmail) == 0 || len(sendingAccountEmail) == 0 || len(sendingAccountPassword) == 0 || len(emailProvider) == 0 {
 		return ErrManditoryFieldsNotFilled

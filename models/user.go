@@ -8,10 +8,19 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+//ErrConfirmPasswordNotEqual should be returned if the user entered in two different passwords on the "confirm" and "new password" fields on the web interface
 var ErrConfirmPasswordNotEqual = errors.New("The new and confirm passwords were not equal")
-var ErrPasswordNotEqual = errors.New("The previous password did not match.")
+
+//ErrPasswordNotEqual if the "current password" is not equal to what the user just submitted (To stop account take over)
+var ErrPasswordNotEqual = errors.New("The previous password did not match")
+
+// ErrUsernameEmpty is returned if during new user creation the username was not specified
 var ErrUsernameEmpty = errors.New("Username was empty")
+
+//ErrPasswordEmpty same as above, but for password
 var ErrPasswordEmpty = errors.New("Password was empty")
+
+//ErrPasswordTooShort is returned If the password to be set is smaller than 10 characters deny it with this error
 var ErrPasswordTooShort = errors.New("Password was below 10 characters in length")
 
 // User is the structure serialised into the database that holds all user information
@@ -26,6 +35,7 @@ type User struct {
 	NotificationInformation NotificationDetail
 }
 
+//AddUser adds a user to the database if the information supplied is valid
 func AddUser(name, password string) error {
 	if len(name) == 0 {
 		return ErrUsernameEmpty
@@ -54,6 +64,7 @@ func AddUser(name, password string) error {
 	return db.Debug().Create(newUser).Error
 }
 
+//ChangePassword change password for user, which checks if the user knows the currrent password.
 func ChangePassword(uid int64, newPassword, confirmNewPassword, currentPasswordInput, currentPasswordHash string) error {
 
 	if newPassword != confirmNewPassword {
@@ -79,10 +90,12 @@ func ChangePassword(uid int64, newPassword, confirmNewPassword, currentPasswordI
 	return nil
 }
 
+//GetAllUsers is a function that returns a list of all users registered
 func GetAllUsers() (users []User, err error) {
 	return users, db.Find(&users).Error
 }
 
+//DeleteUser is the function which deletes users
 func DeleteUser(guid string) error {
 	log.Println("User: '", guid, "'")
 	return db.Delete(&User{}, "guid = ?", guid).Error

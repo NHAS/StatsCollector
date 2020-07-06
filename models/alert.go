@@ -15,8 +15,10 @@ type Alert struct {
 	DiskUtil int64
 }
 
+//ErrPubKeyEmpty is the error returned if a public key was not specified when creating an alert (as alerts are associated with an agent)
 var ErrPubKeyEmpty = errors.New("Public Key not set")
 
+//CreateAlertProfileForAgent adds an associated alert profile. I.e one that may contain disk utilisation limits/notification triggers
 func CreateAlertProfileForAgent(agentPubkey string, diskUtilisation int64, active bool) error {
 	if len(agentPubkey) == 0 {
 		return ErrPubKeyEmpty

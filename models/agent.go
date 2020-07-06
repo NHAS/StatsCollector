@@ -10,7 +10,7 @@ import (
 
 //Agent is the overarching database structure tying all client metrics together
 type Agent struct {
-	Id                 int64
+	ID                 int64
 	Name               string
 	PubKey             string `gorm:"unique;not null"`
 	LastTransmission   time.Time
@@ -25,9 +25,13 @@ type Agent struct {
 	Monitors    []MonitorEntry `gorm:"PRELOAD:true"`
 }
 
+//ErrAgentNameTooLong is returned when an agent name is too long
 var ErrAgentNameTooLong = errors.New("Agent name was >1000 characters long")
+
+//ErrAgentPubKeyNotValid is returned when an ssh key given for an agent is not parsable as a public key
 var ErrAgentPubKeyNotValid = errors.New("The key supplied to create an agent was invalid (not an SSH public key)")
 
+//CreateAgent parses a public key and adds a new agent to the database.
 func CreateAgent(Name, PubKey string) error {
 
 	if len(Name) > 1000 {
@@ -46,6 +50,8 @@ func CreateAgent(Name, PubKey string) error {
 	return db.Create(&newAgent).Error
 }
 
+//DeleteAgent removes an agent and any of its relationed structures (such as disk information) from the database
+//Todo, this is currently a fragile way of doing this, as we have to keep adding more "delete" statements. GORM probably has a way of doing this. But am unsure
 func DeleteAgent(PubKey string) error {
 
 	var toRemove models.Agent
@@ -58,10 +64,13 @@ func DeleteAgent(PubKey string) error {
 	db.Delete(&models.DiskEntry{}, "agent_id = ?", toRemove.Id)
 	db.Delete(&models.Alert{}, "agent_id = ?", toRemove.Id)
 	db.Delete(&models.Event{}, "agent_id = ?", toRemove.Id)
+	db.Delete(&models.SystemInfo{}, "agent_id = ?", toRemove.Id)
 
 	return nil
 }
 
+//GetAgent returns an agent from the database with the matching Public Key
+//It also loads all the associated structures, such as monitors and disk information
 func GetAgent(PubKey string) (Agent, error) {
 	var currentAgent Agent
 
@@ -77,6 +86,7 @@ func GetAgent(PubKey string) (Agent, error) {
 	return currentAgent, nil
 }
 
+//GetAgentList returns a limited number of agents with a filter whether they are connected or not.GetAgentList
 func GetAgentList(filter string, limit int) (agents []Agent, err error) {
 
 	tx := db
@@ -89,6 +99,8 @@ func GetAgentList(filter string, limit int) (agents []Agent, err error) {
 	return agents, err
 }
 
+//GetDashboardInformation gets the agents that are up or down and those that have failed endpoints.
+// This is used in the dashboard
 func GetDashboardInformation() (totalAgents int, downAgents []Agent, degradedAgents []Agent, failedEndPoints []MonitorEntry, err error) {
 
 	err = db.Model(&models.Agent{}).Count(&totalAgents).Error
