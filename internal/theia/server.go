@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net"
+	"strings"
 	"time"
 
 	"github.com/NHAS/StatsCollector/internal/theia/webservice"
@@ -38,28 +39,26 @@ func RunServer(db *gorm.DB, config ServerConfig) {
 	// certificate details and handles authentication of ServerConns.
 	serverConfig := &ssh.ServerConfig{
 		PublicKeyCallback: func(c ssh.ConnMetadata, pubKey ssh.PublicKey) (*ssh.Permissions, error) {
-			authorizedKeysMap := map[string]string{}
+
+			receivedPubKey := strings.TrimSpace(string(ssh.MarshalAuthorizedKey(pubKey)))
 
 			var authorisedKeys []string
-			if err := db.Find(&models.Agent{}).Pluck("pub_key", &authorisedKeys).Error; err != nil && err != gorm.ErrRecordNotFound {
+			if err := db.Debug().Find(&models.Agent{}, "pub_key LIKE ?", receivedPubKey+"%").Pluck("pub_key", &authorisedKeys).Error; err != nil && err != gorm.ErrRecordNotFound {
 				utils.Check("Unable to load public keys from database", err)
 			}
 
-			for _, v := range authorisedKeys {
-				parsedKey, _, _, _, err := ssh.ParseAuthorizedKey([]byte(v))
-				utils.Check("Unable to parse public authorised key", err)
+			log.Printf("Client connected with: [%s] pubkey. Number agents matching that key: %d", string(receivedPubKey), len(authorisedKeys))
 
-				authorizedKeysMap[string(parsedKey.Marshal())] = v
-			}
+			if len(authorisedKeys) == 1 {
 
-			if key, ok := authorizedKeysMap[string(pubKey.Marshal())]; ok {
 				return &ssh.Permissions{
 					// Record the public key used for authentication.
 					Extensions: map[string]string{
-						"pubkey-fp": key,
+						"pubkey-fp": authorisedKeys[0],
 					},
 				}, nil
 			}
+
 			return nil, fmt.Errorf("Unknown public key for %q", c.User())
 		},
 	}
