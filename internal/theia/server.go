@@ -59,6 +59,10 @@ func RunServer(db *gorm.DB, config ServerConfig) {
 				}, nil
 			}
 
+			if len(authorisedKeys) > 1 {
+				log.Printf("Warning key [%s] is used in %d place/s", receivedPubKey, len(authorisedKeys))
+			}
+
 			return nil, fmt.Errorf("Unknown public key for %q", c.User())
 		},
 	}
