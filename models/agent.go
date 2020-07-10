@@ -19,6 +19,7 @@ type Agent struct {
 
 	SystemInfo   SystemInfo
 	AlertProfile Alert
+	Events       []Event
 
 	MemoryUsage float32
 	Disks       []DiskEntry    `gorm:"PRELOAD:true"`
@@ -78,6 +79,7 @@ func GetAgent(PubKey string) (Agent, error) {
 		Preload("Monitors").
 		Preload("Disks").
 		Preload("SystemInfo").
+		Preload("Events").
 		Find(&currentAgent, "pub_key = ?", string(PubKey)).Error; err != nil {
 
 		return Agent{}, err
@@ -86,7 +88,7 @@ func GetAgent(PubKey string) (Agent, error) {
 	return currentAgent, nil
 }
 
-//GetAgentList returns a limited number of agents with a filter whether they are connected or not.GetAgentList
+//GetAgentList returns a limited number of agents with a filter whether they are connected or not.
 func GetAgentList(filter string, limit int) (agents []Agent, err error) {
 
 	tx := db
@@ -94,7 +96,7 @@ func GetAgentList(filter string, limit int) (agents []Agent, err error) {
 		tx = tx.Where("currently_connected = ?", filter == "online")
 	}
 
-	err = tx.Preload("Monitors").Preload("Disks").Find(&agents).Limit(limit).Error
+	err = tx.Preload("Monitors").Preload("Disks").Order("id asc").Find(&agents).Limit(limit).Error
 
 	return agents, err
 }
