@@ -17,44 +17,12 @@
         <div class="col">
 
             <div class="card border-success">
-                <h5 class="card-header text-center">Up</h5>
+                <h5 class="card-header text-center">Hosts Status</h5>
                 <div class="card-body">
-                    <h3 class="card-title text-center" style="padding-top: 2rem;padding-bottom: 2rem;">
-                        <a href="/list_agents?status=online">
-                            <span class="text-success">{{.Up}}</span>/{{.Total}}
-                        </a>
-                    </h3>
 
-                </div>
-            </div>
-
-        </div>
-
-        <div class="col">
-
-            <div class="card border-warning">
-                <h5 class="card-header text-center">Degraded</h5>
-                <div class="card-body">
-                    <h3 class="card-title text-center" style="padding-top: 2rem;padding-bottom: 2rem;">
-                        <span class="text-warning">{{.Degraded}}</span>/{{.Total}}
-                    </h3>
-
-                </div>
-            </div>
-
-        </div>
-
-        <div class="col">
-
-            <div class="card border-danger">
-                <h5 class="card-header text-center ">Down</h5>
-                <div class="card-body ">
-                    <h3 class="card-title text-center" style="padding-top: 2rem;padding-bottom: 2rem;">
-                        <a href="/list_agents?status=offline">
-                            <span class="text-danger">{{.Down}}</span>/{{.Total}}
-                        </a>
-                    </h3>
-
+                    <figure class="highcharts-figure">
+                        <div id="container"></div>
+                    </figure>
                 </div>
             </div>
 
@@ -142,5 +110,61 @@
     </div>
     {{end}}
 </div>
+
+<script>
+
+    let Total = {{.Total }};
+    let Degraded = {{.Degraded }};
+    let Down = {{.Down }};
+    let Up = {{.Up }};
+    Highcharts.chart('container', {
+        chart: {
+            plotBackgroundColor: null,
+            plotBorderWidth: null,
+            plotShadow: false,
+            type: 'pie'
+        },
+        title: {
+            text: ''
+        },
+        tooltip: {
+            pointFormat: '{series.name}: <b>{point.percentage:.1f}%</b>'
+        },
+        accessibility: {
+            point: {
+                valueSuffix: '%'
+            }
+        },
+        plotOptions: {
+            pie: {
+                allowPointSelect: true,
+                cursor: 'pointer',
+                dataLabels: {
+                    enabled: true,
+                    format: '<b>{point.name}</b>: {point.percentage:.1f} %'
+                }
+            }
+        },
+        series: [{
+            name: 'Hosts',
+            colorByPoint: true,
+            data: [{
+                name: 'Offline',
+                y: Down / Total,
+                sliced: true,
+                selected: true,
+                color: '#DC143C'
+            }, {
+                name: 'Degraded',
+                y: Degraded / Total,
+                color: '#F0E68C'
+            }, {
+                name: 'Online',
+                y: Up / Total,
+                color: '#228B22'
+            }]
+        }]
+    });
+</script>
 
 {{template "Bottom" . }}
