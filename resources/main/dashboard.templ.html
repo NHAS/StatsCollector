@@ -1,5 +1,13 @@
 {{template "Top" . }}
 
+<script src="https://d3js.org/d3.v5.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/billboard.js/2.0.0/billboard.min.js"
+    integrity="sha512-71mPsK+6Er/pYj9xuHuUA7utT4zA1eg15o3cMs2ga7z9yg1CtqBH3/uLt13pGmarrVO8ioqqp4ZCvG6ZxK/8UA=="
+    crossorigin="anonymous"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/billboard.js/2.0.0/billboard.min.css"
+    integrity="sha512-eQByYiXTiPKXBFPp6LytUrf2ZSO3PSsserMdGDGuSPdsfkGVZpxBYPPg5v0rkJFVQH3DWHcuUkvSvGQOD/DJ9Q=="
+    crossorigin="anonymous" />
+
 <style>
     table {
         border-top: hidden;
@@ -19,10 +27,7 @@
             <div class="card border-success">
                 <h5 class="card-header text-center">Hosts Status</h5>
                 <div class="card-body">
-
-                    <figure class="highcharts-figure">
-                        <div id="container"></div>
-                    </figure>
+                    <div id="chart"></div>
                 </div>
             </div>
 
@@ -113,57 +118,25 @@
 
 <script>
 
-    let Total = {{.Total }};
     let Degraded = {{.Degraded }};
     let Down = {{.Down }};
     let Up = {{.Up }};
-    Highcharts.chart('container', {
-        chart: {
-            plotBackgroundColor: null,
-            plotBorderWidth: null,
-            plotShadow: false,
-            type: 'pie'
-        },
-        title: {
-            text: ''
-        },
-        tooltip: {
-            pointFormat: '{series.name}: <b>{point.percentage:.1f}%</b>'
-        },
-        accessibility: {
-            point: {
-                valueSuffix: '%'
-            }
-        },
-        plotOptions: {
-            pie: {
-                allowPointSelect: true,
-                cursor: 'pointer',
-                dataLabels: {
-                    enabled: true,
-                    format: '<b>{point.name}</b>: {point.percentage:.1f} %'
-                }
-            }
-        },
-        series: [{
-            name: 'Hosts',
-            colorByPoint: true,
-            data: [{
-                name: 'Offline',
-                y: Down / Total,
-                sliced: true,
-                selected: true,
-                color: '#DC143C'
-            }, {
-                name: 'Degraded',
-                y: Degraded / Total,
-                color: '#F0E68C'
-            }, {
-                name: 'Online',
-                y: Up / Total,
-                color: '#228B22'
-            }]
-        }]
+    var chart = bb.generate({
+        data: {
+            bindto: "#chart",
+            columns: [
+                ["Online", Up],
+                ["Offline", Down],
+                ["Degraded", Degraded]
+            ],
+            colors: {
+                Online: "green",
+                Offline: "red",
+                Degraded: "orange"
+            },
+            type: "pie",
+        }
+
     });
 </script>
 
