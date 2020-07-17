@@ -49,7 +49,6 @@ Generate keypairs for both the client and server with ssh-keygen.
 ```
 ssh-keygen -t ed25519 -f server/id_ed25519
 ssh-keygen -t ed25519 -f client/id_ed25519
-
 ```
 
 
@@ -165,6 +164,6 @@ WantedBy=multi-user.target
 
 - Rename agents in web interface
 - Rework email notifications to be user specific
-- Rework disk utilisation to be disk specific, so you can disable alerts on loopback devices
+- Rework disk utilisation alerts to be disk specific, so you can disable alerts on loopback devices
 - Add more useful information to the dashboard when all hosts are up
 - Create automated deployement script, or look into packaging 
