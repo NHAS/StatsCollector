@@ -159,6 +159,7 @@ WantedBy=multi-user.target
 - Events arent displayed with very useful information as of yet
 - Dashboard is quite information sparse
 - Renaming of agents isnt possible through the web interface as of yet
+- If monitor of an endpoint is removed client side, it is not updated server side
 
 ## Todo
 

@@ -226,6 +226,12 @@ func handleAgentConnection(nConn net.Conn, config *ssh.ServerConfig, db *gorm.DB
 					}).Error; err != nil {
 						log.Println("Error: ", err)
 					}
+
+					//Gorm doesnt update values if the value is "default" in a struct i.e false..., so t -> f never works.
+					//Stupid brittle fix
+					if err := db.Model(&me).Update("ok", monitorV.OK).Error; err != nil {
+						log.Println("Error: ", err)
+					}
 				}
 
 			}

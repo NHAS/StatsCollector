@@ -3,6 +3,7 @@ package iris
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net"
@@ -85,6 +86,8 @@ func RunClient(config ClientConfig) {
 
 		go ssh.DiscardRequests(reqs)
 
+		//Updates the system metrics that shouldnt change very often, such as memory size/cpu
+		//Uses ssh channels
 		go func() {
 			log.Println("Started sending system info")
 
@@ -101,6 +104,7 @@ func RunClient(config ClientConfig) {
 			}
 		}()
 
+		//The main workhorse, sends all the changing stats and does liveness checks on endpoints
 		go func() {
 			defer channel.Close()
 
@@ -201,7 +205,7 @@ check:
 
 			if resp.StatusCode != m.OkayCode {
 				ms.OK = false
-				ms.Reason = "Status code not expected"
+				ms.Reason = "Status code not expected (Got " + fmt.Sprintf("%d", resp.StatusCode) + " expected " + fmt.Sprintf("%d", m.OkayCode) + ")"
 				output[index] = ms
 				continue
 			}
@@ -227,6 +231,7 @@ check:
 			}
 
 		default:
+			log.Println("Testing using net dialer")
 			d := net.Dialer{Timeout: time.Duration(m.TimeoutSeconds) * time.Second}
 			_, err := d.Dial(u.Scheme, u.Host)
 			if err != nil {
